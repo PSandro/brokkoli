@@ -3,6 +3,8 @@ use env_logger;
 use awc::Client;
 use clap::Parser;
 use actix_web_static_files::ResourceFiles;
+use linux_embedded_hal::{Delay, I2cdev};
+use bme280::i2c::BME280;
 
 include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 
@@ -34,7 +36,6 @@ async fn index() -> Result<HttpResponse, Error> {
        .body(include_str!("index.html")))
 }
 
-
 #[derive(clap::Parser, Debug)]
 struct CliArguments {
     #[arg(long, default_value = "0.0.0.0")]
@@ -54,6 +55,17 @@ async fn main() -> std::io::Result<()> {
         &args.host,
         args.port
     );
+
+    if let Ok(i2c_bus) = I2cdev::new("/dev/i2c-1") {
+        let mut bme280 = BME280::new_primary(i2c_bus);
+        let mut delay = Delay;
+        bme280.init(&mut delay).unwrap();
+        let measurements = bme280.measure(&mut delay).unwrap();
+        println!("Relative Humidity = {}%", measurements.humidity);
+        println!("Temperature = {} deg C", measurements.temperature);
+        println!("Pressure = {} pascals", measurements.pressure);
+    }
+
 
     HttpServer::new(|| {
         let generated = generate();

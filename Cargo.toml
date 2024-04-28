@@ -13,6 +13,8 @@ awc = "3.4.0"
 env_logger = "0.11.3"
 log = "0.4.21"
 clap = { version="4.5.4" , features = ["derive"]}
+linux-embedded-hal = { version = "0.4", features = ["gpio_cdev"] }
+bme280 = { version = "0.5", features = ["serde"] }
 
 [build-dependencies]
 static-files = "0.2.1"
