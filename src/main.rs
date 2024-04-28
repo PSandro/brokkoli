@@ -29,33 +29,8 @@ async fn proxy(
 
 #[get("/")]
 async fn index() -> Result<HttpResponse, Error> {
-    let body = "
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>BROKKOLI</title>
-    <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
-    <link rel=\"shortcut icon\" type=\"image/png\" href=\"/static/favicon.ico\"/>
-    <link rel=\"stylesheet\" href=\"/static/pico.min.css\">
-  </head>
-  <body>
-    <nav class=\"container-fluid\">
-      <ul>
-        <li><a href=\"/\"><strong>BROKKOLI</strong></a></li>
-      </ul>
-    </nav>
-    <main class=\"container\">
-      <img src=\"/stream/0\">
-    </main>
-
-    <footer class=\"container-fluid\">
-    </footer>
-  </body>
-</html>
-    ";
-
     Ok(HttpResponse::Ok().content_type("text/html; charset=utf-8")
-       .body(body))
+       .body(include_str!("index.html")))
 }
 
 
