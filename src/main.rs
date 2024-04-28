@@ -1,6 +1,7 @@
 use actix_web::{middleware::Logger, get, web, App, Error, HttpServer,  HttpResponse, HttpRequest};
 use env_logger;
 use awc::Client;
+use clap::Parser;
 use actix_web_static_files::ResourceFiles;
 
 include!(concat!(env!("OUT_DIR"), "/generated.rs"));
@@ -34,9 +35,26 @@ async fn index() -> Result<HttpResponse, Error> {
 }
 
 
+#[derive(clap::Parser, Debug)]
+struct CliArguments {
+    #[arg(long, default_value = "0.0.0.0")]
+    host: String,
+    #[arg(long, default_value_t = 8080)]
+    port: u16,
+}
+
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
+    let args = CliArguments::parse();
+        log::info!(
+        "starting HTTP server at http://{}:{}",
+        &args.host,
+        args.port
+    );
+
     HttpServer::new(|| {
         let generated = generate();
         App::new()
@@ -46,7 +64,7 @@ async fn main() -> std::io::Result<()> {
             .service(index)
             .wrap(Logger::default())
     })
-    .bind(("127.0.0.1", 8070))?
+    .bind((args.host, args.port))?
     .run()
     .await
 }
