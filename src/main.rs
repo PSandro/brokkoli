@@ -40,7 +40,7 @@ async fn index() -> Result<HttpResponse, Error> {
 struct CliArguments {
     #[arg(long, default_value = "0.0.0.0")]
     host: String,
-    #[arg(long, default_value_t = 8080)]
+    #[arg(long, default_value_t = 5000)]
     port: u16,
 }
 
