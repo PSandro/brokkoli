@@ -1,4 +1,4 @@
-use actix_web::{rt, middleware::Logger, get, web, App, Error, HttpServer,  HttpResponse, HttpRequest};
+use actix_web::{middleware::Logger, get, web, App, Error, HttpServer,  HttpResponse, HttpRequest};
 use env_logger;
 use awc::Client;
 use clap::Parser;
@@ -81,12 +81,11 @@ async fn main() -> std::io::Result<()> {
     let sensorhub = web::Data::new(sensor::SensorHub::new().start());
     let sensorhub_clone = web::Data::clone(&sensorhub);
 
-    rt::spawn(async move {
+    std::thread::spawn(move || {
         if let Ok(i2c_bus) = I2cdev::new("/dev/i2c-1") {
             let mut bme280 = BME280::new_primary(i2c_bus);
             let mut delay = Delay;
             bme280.init(&mut delay).unwrap();
-            let mut interval = rt::time::interval(std::time::Duration::from_secs(2));
             loop {
                 let measurements = bme280.measure(&mut delay).unwrap();
                 let msg = BME280Measurement{
@@ -95,8 +94,10 @@ async fn main() -> std::io::Result<()> {
                     temperature: measurements.temperature
                 };
                 sensorhub_clone.do_send(msg);
-                interval.tick().await;
+                std::thread::sleep(std::time::Duration::from_secs(1));
             }
+        } else {
+            println!("I2C device not available");
         }
 
     });
@@ -115,4 +116,6 @@ async fn main() -> std::io::Result<()> {
     .bind((args.host, args.port))?
     .run()
     .await
+
+
 }
