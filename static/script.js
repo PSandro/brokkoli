@@ -6,4 +6,21 @@ function display_humidity() {
   }
 }
 
-window.onload = () => {display_humidity()}
+function init_audio() {
+  let audio = document.getElementById('audioPlayer');
+  let playPauseButton = document.getElementById('playPauseButton');
+  playPauseButton.addEventListener('click', function() {
+    if (audio.paused) {
+      audio.play();
+      playPauseButton.textContent = 'Pause';
+    } else {
+      audio.pause();
+      playPauseButton.textContent = 'Play';
+    }
+  });
+}
+
+window.onload = () => {
+  init_audio();
+  display_humidity();
+}

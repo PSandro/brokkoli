@@ -17,6 +17,9 @@ linux-embedded-hal = { version = "0.4", features = ["gpio_cdev"] }
 bme280 = { version = "0.5", features = ["serde"] }
 actix-web-actors = "4.3.0"
 actix = "0.13.3"
+tinytemplate = "1.2.1"
+serde_json = "1.0.116"
+chrono = "0.4.38"
 
 [build-dependencies]
 static-files = "0.2.1"

@@ -78,7 +78,6 @@ impl Handler<BME280Measurement> for SensorHub {
     type Result = ();
 
     fn handle(&mut self, msg: BME280Measurement, _: &mut Context<Self>) {
-        println!("{:?}", msg);
         self.send_message(format!("{}", msg.humidity).as_str());
     }
 }

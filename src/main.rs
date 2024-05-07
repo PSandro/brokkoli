@@ -1,4 +1,6 @@
-use actix_web::{middleware::Logger, get, web, App, Error, HttpServer,  HttpResponse, HttpRequest};
+use actix_web::{rt, error, middleware::Logger, get, web, App, Error, HttpServer,  HttpResponse, HttpRequest};
+use std::sync::RwLock;
+use tinytemplate::TinyTemplate;
 use env_logger;
 use awc::Client;
 use clap::Parser;
@@ -10,8 +12,10 @@ use actix_web_actors::ws;
 
 mod sensor;
 mod session;
+mod camera;
 
 use sensor::BME280Measurement;
+use camera::Camera;
 
 include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 
@@ -20,27 +24,32 @@ async fn proxy(
     req: HttpRequest,
     payload: web::Payload,
     client: web::Data<Client>,
+    cam: web::Data<RwLock<Camera>>,
     ) -> Result<HttpResponse, Error> {
 
-  let forwarded_req = client
-      .request_from("http://127.0.0.1:8080/stream", req.head())
+    
+    let forwarded_req = client
+      .request_from(cam.read().unwrap().base_url.as_str(), req.head())
       .no_decompress();
 
-  let res = forwarded_req
+    let res = forwarded_req
       .send_stream(payload)
       .await.unwrap();
 
-  let mut client_resp = HttpResponse::build(res.status());
-  for (header_name, header_value) in res.headers().iter().filter(|(h, _)| *h != "connection") {
-      client_resp.insert_header((header_name.clone(), header_value.clone()));
-  }
-  Ok(client_resp.streaming(res))
+    let mut client_resp = HttpResponse::build(res.status());
+    for (header_name, header_value) in res.headers().iter().filter(|(h, _)| *h != "connection") {
+        client_resp.insert_header((header_name.clone(), header_value.clone()));
+    }
+    Ok(client_resp.streaming(res))
 }
 
 #[get("/")]
-async fn index() -> Result<HttpResponse, Error> {
-    Ok(HttpResponse::Ok().content_type("text/html; charset=utf-8")
-       .body(include_str!("index.html")))
+async fn index(
+    tmpl: web::Data<TinyTemplate<'_>>,
+    ) -> Result<HttpResponse, Error> {
+    let s = tmpl.render("index.html", &serde_json::Value::Null)
+        .map_err(|_| error::ErrorInternalServerError("Template error")).unwrap();
+    Ok(HttpResponse::Ok().content_type("text/html; charset=utf-8").body(s))
 }
 
 #[get("/ws")]
@@ -64,6 +73,8 @@ struct CliArguments {
     host: String,
     #[arg(long, default_value_t = 5000)]
     port: u16,
+    #[arg(long, default_value = "http://127.0.0.1:8080")]
+    cam_url: String,
 }
 
 
@@ -78,10 +89,19 @@ async fn main() -> std::io::Result<()> {
         args.port
     );
 
+    let cam = web::Data::new(RwLock::new(Camera{base_url:args.cam_url}));
+    let cam_clone = cam.clone();
+    rt::spawn(async move {
+        loop {
+            cam_clone.write().unwrap().save_snapshot().await.unwrap();
+            rt::time::sleep(std::time::Duration::from_secs(5 * 60)).await;
+        }
+    });
+
     let sensorhub = web::Data::new(sensor::SensorHub::new().start());
     let sensorhub_clone = web::Data::clone(&sensorhub);
 
-    std::thread::spawn(move || {
+    rt::spawn(async move {
         if let Ok(i2c_bus) = I2cdev::new("/dev/i2c-1") {
             let mut bme280 = BME280::new_primary(i2c_bus);
             let mut delay = Delay;
@@ -94,7 +114,7 @@ async fn main() -> std::io::Result<()> {
                     temperature: measurements.temperature
                 };
                 sensorhub_clone.do_send(msg);
-                std::thread::sleep(std::time::Duration::from_secs(1));
+                rt::time::sleep(std::time::Duration::from_millis(500)).await;
             }
         } else {
             println!("I2C device not available");
@@ -104,9 +124,12 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         let generated = generate();
+        let mut tt = TinyTemplate::new();
+        tt.add_template("index.html", INDEX).unwrap();
         App::new()
             .app_data(web::Data::new(Client::default()))
             .app_data(sensorhub.clone())
+            .app_data(cam.clone())
             .service(ResourceFiles::new("/static", generated))
             .service(proxy)
             .service(index)
@@ -119,3 +142,4 @@ async fn main() -> std::io::Result<()> {
 
 
 }
+static INDEX: &str = include_str!("../templates/index.html");
