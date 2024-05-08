@@ -2,7 +2,9 @@ function display_humidity() {
   const url = ((location.protocol !== "https:")?"ws://":"wss://") + window.location.host + "/ws";
   let ws = new WebSocket(url);
   ws.onmessage = function(msg) {
-    document.getElementById('humidity').innerText = msg.data;
+    const data = JSON.parse(msg.data);
+    document.getElementById('humidity').innerText = data.humidity;
+    document.getElementById('temperature').innerText = data.temperature;
   }
 }
 

@@ -1,4 +1,6 @@
 use std::collections::HashSet;
+use serde::{Deserialize, Serialize};
+
 use actix::prelude::*;
 
 #[derive(Message)]
@@ -24,6 +26,7 @@ pub struct ClientMessage {
 }
 
 #[derive(Message, Debug)]
+#[derive(Serialize, Deserialize)]
 #[rtype(result = "()")]
 pub struct BME280Measurement {
     pub humidity: f32,
@@ -78,7 +81,7 @@ impl Handler<BME280Measurement> for SensorHub {
     type Result = ();
 
     fn handle(&mut self, msg: BME280Measurement, _: &mut Context<Self>) {
-        self.send_message(format!("{}", msg.humidity).as_str());
+        self.send_message(serde_json::to_string(&msg).unwrap().as_str());
     }
 }
 
