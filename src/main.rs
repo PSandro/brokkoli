@@ -28,8 +28,9 @@ async fn proxy(
     ) -> Result<HttpResponse, Error> {
 
     
+    let stream_url = format!("{}/stream", cam.read().unwrap().base_url.as_str());
     let forwarded_req = client
-      .request_from(cam.read().unwrap().base_url.as_str(), req.head())
+      .request_from(stream_url, req.head())
       .no_decompress();
 
     let res = forwarded_req
@@ -128,6 +129,7 @@ async fn main() -> std::io::Result<()> {
         tt.add_template("index.html", INDEX).unwrap();
         App::new()
             .app_data(web::Data::new(Client::default()))
+            .app_data(web::Data::new(tt))
             .app_data(sensorhub.clone())
             .app_data(cam.clone())
             .service(ResourceFiles::new("/static", generated))
