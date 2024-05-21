@@ -107,7 +107,7 @@ async fn main() -> std::io::Result<()> {
         args.port
     );
 
-    let cfg: Config = confy::load("brokkoli", "config").unwrap();
+    let cfg: Config = Config::default();
 
     let conn = Connection::open(cfg.db_path).expect("could not open sqlite database");
     db::create_tables(conn).expect("could not create tables");
