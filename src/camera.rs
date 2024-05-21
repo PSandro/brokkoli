@@ -1,7 +1,8 @@
 use awc::Client;
-use std::fs::File;
 use chrono::{DateTime, Utc};
-use std::io::Write;
+use std::fs::File;
+use std::io::{Write};
+use anyhow::Result;
 
 #[derive(Debug, Clone)]
 pub struct Camera {
@@ -9,26 +10,32 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub async fn save_snapshot(&mut self) -> std::io::Result<()> {
+    pub async fn save_snapshot(&mut self) -> Result<()> {
         let client = Client::default();
-        let mut res = client.get(format!("{}/snapshot", self.base_url))
+        if let Ok(mut res) = client.get(format!("{}/snapshot", self.base_url))
             .insert_header(("accept", "image/jpeg"))
-            .send().await.unwrap();
-        std::fs::create_dir_all("snapshots")?;
-        let now: DateTime<Utc> = Utc::now();
+            .send()
+            .await {
 
-        if res.status().is_success() {
-            let bytes = res.body().await.unwrap();
-            let filename = format!(
-                "snapshots/{}.jpg",
-                now.format("%Y-%m-%dT%H:%M:%S")
+            std::fs::create_dir_all("snapshots")?;
+            let now: DateTime<Utc> = Utc::now();
+
+            if res.status().is_success() {
+                let bytes = res.body().await?;
+                let filename = format!(
+                    "snapshots/{}.jpg",
+                    now.format("%Y-%m-%dT%H:%M:%S")
                 );
-            let mut file = File::create(&filename).expect("Failed to create file");
-            file.write_all(&bytes)?;
-            println!("snapshot {} downloaded successfully!", &filename);
+                let mut file = File::create(&filename)?;
+                file.write_all(&bytes)?;
+                println!("snapshot {} downloaded successfully!", &filename);
+            } else {
+                println!("failed to download image: {}", res.status());
+            }
         } else {
-            println!("failed to download image: {}", res.status());
+            println!("could not connect to cam_url: {}", self.base_url);
         }
+
         Ok(())
     }
 }

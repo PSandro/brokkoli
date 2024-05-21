@@ -9,6 +9,7 @@ use linux_embedded_hal::{Delay, I2cdev};
 use bme280::i2c::BME280;
 use actix::{Addr, Actor};
 use actix_web_actors::ws;
+use serde::{Serialize, Deserialize};
 
 mod sensor;
 mod session;
@@ -74,9 +75,21 @@ struct CliArguments {
     host: String,
     #[arg(long, default_value_t = 5000)]
     port: u16,
-    #[arg(long, default_value = "http://127.0.0.1:8080")]
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Config {
     cam_url: String,
 }
+
+impl ::std::default::Default for Config {
+    fn default() -> Self {
+        Self {
+            cam_url: "http://127.0.0.1:8080".into()
+        }
+    }
+}
+
 
 
 #[actix_web::main]
@@ -90,7 +103,9 @@ async fn main() -> std::io::Result<()> {
         args.port
     );
 
-    let cam = web::Data::new(RwLock::new(Camera{base_url:args.cam_url}));
+    let cfg: Config = confy::load("brokkoli", "config").unwrap();
+
+    let cam = web::Data::new(RwLock::new(Camera{base_url:cfg.cam_url}));
     let cam_clone = cam.clone();
     rt::spawn(async move {
         loop {
