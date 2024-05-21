@@ -1,5 +1,6 @@
 use actix_web::{rt, error, middleware::Logger, get, web, App, Error, HttpServer,  HttpResponse, HttpRequest};
 use std::sync::RwLock;
+use rusqlite::{Connection, Result};
 use tinytemplate::TinyTemplate;
 use env_logger;
 use awc::Client;
@@ -14,6 +15,7 @@ use serde::{Serialize, Deserialize};
 mod sensor;
 mod session;
 mod camera;
+mod db;
 
 use sensor::BME280Measurement;
 use camera::Camera;
@@ -80,12 +82,14 @@ struct CliArguments {
 #[derive(Debug, Serialize, Deserialize)]
 struct Config {
     cam_url: String,
+    db_path: String,
 }
 
 impl ::std::default::Default for Config {
     fn default() -> Self {
         Self {
-            cam_url: "http://127.0.0.1:8080".into()
+            cam_url: "http://127.0.0.1:8080".into(),
+            db_path: "./brokkoli.sqlite3".into()
         }
     }
 }
@@ -104,6 +108,9 @@ async fn main() -> std::io::Result<()> {
     );
 
     let cfg: Config = confy::load("brokkoli", "config").unwrap();
+
+    let conn = Connection::open(cfg.db_path).expect("could not open sqlite database");
+    db::create_tables(conn).expect("could not create tables");
 
     let cam = web::Data::new(RwLock::new(Camera{base_url:cfg.cam_url}));
     let cam_clone = cam.clone();
