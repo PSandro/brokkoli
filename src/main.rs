@@ -12,12 +12,12 @@ use actix::{Addr, Actor};
 use actix_web_actors::ws;
 use serde::{Serialize, Deserialize};
 
-mod sensor;
+mod control;
 mod session;
 mod camera;
 mod db;
 
-use sensor::BME280Measurement;
+use control::BME280Measurement;
 use camera::Camera;
 
 include!(concat!(env!("OUT_DIR"), "/generated.rs"));
@@ -60,7 +60,7 @@ async fn index(
 async fn websocket_route(
         req: HttpRequest,
         stream: web::Payload,
-        srv: web::Data<Addr<sensor::SensorHub>>,
+        srv: web::Data<Addr<control::ControlHub>>,
 ) -> Result<HttpResponse, Error> {
     ws::start(
         session::WsChatSession {
@@ -121,8 +121,8 @@ async fn main() -> std::io::Result<()> {
         }
     });
 
-    let sensorhub = web::Data::new(sensor::SensorHub::new().start());
-    let sensorhub_clone = web::Data::clone(&sensorhub);
+    let controlhub = web::Data::new(control::ControlHub::new().start());
+    let controlhub_clone = web::Data::clone(&controlhub);
 
     rt::spawn(async move {
         if let Ok(i2c_bus) = I2cdev::new("/dev/i2c-1") {
@@ -136,7 +136,7 @@ async fn main() -> std::io::Result<()> {
                     pressure: measurements.pressure,
                     temperature: measurements.temperature
                 };
-                sensorhub_clone.do_send(msg);
+                controlhub_clone.do_send(msg);
                 rt::time::sleep(std::time::Duration::from_millis(500)).await;
             }
         } else {
@@ -152,7 +152,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(web::Data::new(Client::default()))
             .app_data(web::Data::new(tt))
-            .app_data(sensorhub.clone())
+            .app_data(controlhub.clone())
             .app_data(cam.clone())
             .service(ResourceFiles::new("/static", generated))
             .service(proxy)

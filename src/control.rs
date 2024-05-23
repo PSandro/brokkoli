@@ -35,19 +35,19 @@ pub struct BME280Measurement {
 }
 
 #[derive(Debug)]
-pub struct SensorHub {
+pub struct ControlHub {
     sessions: HashSet<Recipient<Message>>,
 }
 
-impl SensorHub {
-    pub fn new() -> SensorHub {
-        SensorHub {
+impl ControlHub {
+    pub fn new() -> ControlHub {
+        ControlHub {
             sessions: HashSet::new(),
         }
     }
 }
 
-impl SensorHub {
+impl ControlHub {
     fn send_message(&self, message: &str) {
         for addr in self.sessions.iter() {
             addr.do_send(Message(message.to_owned()));
@@ -55,11 +55,11 @@ impl SensorHub {
     }
 }
 
-impl Actor for SensorHub {
+impl Actor for ControlHub {
     type Context = Context<Self>;
 }
 
-impl Handler<Connect> for SensorHub {
+impl Handler<Connect> for ControlHub {
     type Result = usize;
 
     fn handle(&mut self, msg: Connect, _: &mut Context<Self>) -> Self::Result {
@@ -68,7 +68,7 @@ impl Handler<Connect> for SensorHub {
     }
 }
 
-impl Handler<Disconnect> for SensorHub {
+impl Handler<Disconnect> for ControlHub {
     type Result = ();
 
     fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
@@ -77,7 +77,7 @@ impl Handler<Disconnect> for SensorHub {
     }
 }
 
-impl Handler<BME280Measurement> for SensorHub {
+impl Handler<BME280Measurement> for ControlHub {
     type Result = ();
 
     fn handle(&mut self, msg: BME280Measurement, _: &mut Context<Self>) {
@@ -85,7 +85,7 @@ impl Handler<BME280Measurement> for SensorHub {
     }
 }
 
-impl Handler<ClientMessage> for SensorHub {
+impl Handler<ClientMessage> for ControlHub {
     type Result = ();
 
     fn handle(&mut self, _: ClientMessage, _: &mut Context<Self>) {

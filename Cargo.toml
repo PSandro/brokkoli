@@ -23,6 +23,7 @@ chrono = "0.4.38"
 serde = { version = "1.0.201", features = ["serde_derive"]}
 anyhow = "1.0"
 rusqlite = { version = "0.31.0", features = ["bundled", "chrono"] }
+rppal = { version = "0.18.0", features = ["embedded-hal"] }
 
 [build-dependencies]
 static-files = "0.2.1"

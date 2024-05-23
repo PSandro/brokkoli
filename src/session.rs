@@ -1,11 +1,11 @@
 use actix::prelude::*;
 use actix_web_actors::ws;
 
-use crate::sensor;
+use crate::control;
 
 #[derive(Debug)]
 pub struct WsChatSession {
-    pub addr: Addr<sensor::SensorHub>,
+    pub addr: Addr<control::ControlHub>,
 }
 
 impl Actor for WsChatSession {
@@ -14,7 +14,7 @@ impl Actor for WsChatSession {
     fn started(&mut self, ctx: &mut Self::Context) {
         let addr = ctx.address();
         self.addr
-            .send(sensor::Connect {
+            .send(control::Connect {
                 addr: addr.recipient(),
             })
             .into_actor(self)
@@ -25,15 +25,15 @@ impl Actor for WsChatSession {
     }
 
     fn stopping(&mut self, ctx: &mut Self::Context) -> Running {
-        self.addr.do_send(sensor::Disconnect { addr: ctx.address().recipient() });
+        self.addr.do_send(control::Disconnect { addr: ctx.address().recipient() });
         Running::Stop
     }
 }
 
-impl Handler<sensor::Message> for WsChatSession {
+impl Handler<control::Message> for WsChatSession {
     type Result = ();
 
-    fn handle(&mut self, msg: sensor::Message, ctx: &mut Self::Context) {
+    fn handle(&mut self, msg: control::Message, ctx: &mut Self::Context) {
         ctx.text(msg.0);
     }
 }
