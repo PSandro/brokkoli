@@ -3,8 +3,8 @@ function display_humidity() {
   let ws = new WebSocket(url);
   ws.onmessage = function(msg) {
     const data = JSON.parse(msg.data);
-    document.getElementById('humidity').innerText = data.humidity;
-    document.getElementById('temperature').innerText = data.temperature;
+    document.getElementById('humidity').innerText = data.humidity.toFixed(1);
+    document.getElementById('temperature').innerText = data.temperature.toFixed(1);
   }
 }
 
