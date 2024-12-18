@@ -30,8 +30,14 @@ async fn proxy(
     cam: web::Data<RwLock<Camera>>,
     ) -> Result<HttpResponse, Error> {
 
-    
-    let stream_url = format!("{}/stream", cam.read().unwrap().base_url.as_str());
+    let stream_url = match cam.read() {
+        Ok(cam_data) => format!("{}/stream", cam_data.base_url.as_str()),
+        Err(poisoned) => {
+            eprintln!("Lock poisoned: {:?}", poisoned);
+            let cam_data = poisoned.into_inner();
+            format!("{}/stream", cam_data.base_url.as_str())
+        }
+    };
     let forwarded_req = client
       .request_from(stream_url, req.head())
       .no_decompress();
